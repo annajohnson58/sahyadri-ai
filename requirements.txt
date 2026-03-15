@@ -8,7 +8,7 @@ Flask
 
 
 # --- AI & Machine Learning ---
-tensorflow==2.19.0
+tensorflow>=2.16.0
 xgboost==3.0.2
 scikit-learn
 numpy
