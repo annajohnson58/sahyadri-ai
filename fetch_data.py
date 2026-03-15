@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import sys
 import json
+import time
 from datetime import datetime, timedelta
 
 # === 1. HYBRID INITIALIZATION ===
@@ -12,6 +13,7 @@ def initialize_gee():
         if 'EE_JSON_KEY' in os.environ:
             print("🔐 GitHub Actions detected. Authenticating via Service Account...")
             ee_key_data = json.loads(os.environ['EE_JSON_KEY'])
+            # Using standard initialization for service accounts
             credentials = ee.ServiceAccountCredentials(
                 ee_key_data['client_email'], 
                 key_data=os.environ['EE_JSON_KEY']
@@ -36,7 +38,9 @@ def get_verified_gfs():
                 .filter(ee.Filter.gt('forecast_hours', 0))\
                 .sort('system:time_start', False)
         
-        if col.size().getInfo() > 0:
+        # Check size without .getInfo() to save quota/time
+        count = col.size().getInfo()
+        if count > 0:
             img = col.first()
             print(f"📡 Using GFS Forecast Cycle from: {target_date}")
             return img
@@ -44,7 +48,6 @@ def get_verified_gfs():
     raise Exception("❌ No GFS forecast data found. Check your internet or GEE quota.")
 
 def start_forecast_fetch():
-    # Use os.path.join for Windows/Linux compatibility
     grid_csv = os.path.join('data', 'grid_locations.csv')
     output_csv = os.path.join('data', 'realtime_weather_features.csv')
 
@@ -76,24 +79,41 @@ def start_forecast_fetch():
     # COMBINE ALL BANDS
     combined = ee.Image.cat([temp, wind_u, wind_v, ndvi, terrain, precip])
 
-    # --- 3. EXTRACT DATA ---
-    features = [ee.Feature(ee.Geometry.Point([row.lon, row.lat]), {'grid_id': row.grid_id}) 
-                for _, row in df.iterrows()]
-    fc = ee.FeatureCollection(features)
-
+    # --- 3. CHUNKED EXTRACTION (FIX FOR 5000 LIMIT) ---
     print(f"🚀 Sampling {len(df)} grid points in Kerala...")
     
-    # Reduction logic
-    sampled_fc = combined.reduceRegions(
-        collection=fc, 
-        reducer=ee.Reducer.first(), 
-        scale=250 
-    ).getInfo()
+    # Split the dataframe into chunks of 3000 to stay under the 5000 limit
+    chunk_size = 3000
+    all_extracted_data = []
 
-    # --- 4. SAVE LOCALLY FOR PIPELINE ---
-    # We extract the properties from the GEE FeatureCollection and save to CSV
-    extracted_data = [feat['properties'] for feat in sampled_fc['features']]
-    new_df = pd.DataFrame(extracted_data)
+    for i in range(0, len(df), chunk_size):
+        chunk_df = df.iloc[i : i + chunk_size]
+        print(f"  Processing chunk {i//chunk_size + 1}: Points {i} to {i + len(chunk_df)}...")
+
+        features = [
+            ee.Feature(ee.Geometry.Point([row.lon, row.lat]), {
+                'grid_id': str(row.grid_id),
+                'lat': float(row.lat),
+                'lon': float(row.lon)
+            }) 
+            for _, row in chunk_df.iterrows()
+        ]
+        
+        fc = ee.FeatureCollection(features)
+
+        # Apply reduction
+        sampled_fc = combined.reduceRegions(
+            collection=fc, 
+            reducer=ee.Reducer.first(), 
+            scale=250 
+        ).getInfo()
+
+        # Extract properties from this chunk
+        chunk_data = [feat['properties'] for feat in sampled_fc['features']]
+        all_extracted_data.extend(chunk_data)
+
+    # --- 4. SAVE LOCALLY ---
+    new_df = pd.DataFrame(all_extracted_data)
     
     # Ensure directory exists
     os.makedirs('data', exist_ok=True)
