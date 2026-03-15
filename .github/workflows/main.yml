@@ -2,41 +2,53 @@ name: Sahyadri AI Realtime Pipeline
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs every day at midnight UTC
-  workflow_dispatch:      # Allows you to click a button to run it manually
+    - cron: '0 0 * * *' # Runs daily at 00:00 UTC (5:30 AM IST)
+  workflow_dispatch:      # Allows you to click "Run workflow" manually for testing
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
+    # Added permissions to allow the bot to commit data back to your repo
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+        cache: 'pip'
 
     - name: Install Requirements
       run: |
+        python -m pip install --upgrade pip
         pip install -r requirements.txt
 
     - name: Run Data Fetch and Inference
       env:
-        # This pulls the JSON key you saved in GitHub Secrets
+        # Accesses the Google Earth Engine Secret you saved in Repo Settings
         EE_JSON_KEY: ${{ secrets.EARTH_ENGINE_TOKEN }}
       run: |
-        # 1. Fetch from GEE
+        # 1. Fetch live GEE weather data
         python fetch_data.py
-        # 2. Run the Ensemble Models
+        # 2. Generate Ensemble Predictions
         python run_inference.py
 
     - name: Commit and Push Results
       run: |
         git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add data/realtime_predictions.csv
-        # Only commit if the file actually changed
-        git commit -m "🤖 Auto-update: Fire Forecast $(date)" || echo "No changes to commit"
-        git push
+        git config --local user.name "GitHub Action Bot"
+        
+        # Only add the generated/updated prediction files
+        git add data/realtime_weather_features.csv data/realtime_predictions.csv
+        
+        # Only commit if changes exist to avoid pipeline errors
+        if git diff --quiet && git diff --staged --quiet; then
+          echo "No changes in predictions. Skipping commit."
+        else
+          git commit -m "🤖 Auto-Update: Sahyadri Forecast $(date +'%Y-%m-%d')"
+          git push
+        fi
