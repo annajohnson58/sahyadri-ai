@@ -5,6 +5,7 @@ dash-leaflet
 plotly
 gunicorn
 Flask
+python-version: '3.12'
 
 # --- AI & Machine Learning ---
 tensorflow==2.19.0
