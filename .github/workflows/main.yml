@@ -1,0 +1,42 @@
+name: Sahyadri AI Realtime Pipeline
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight UTC
+  workflow_dispatch:      # Allows you to click a button to run it manually
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Requirements
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run Data Fetch and Inference
+      env:
+        # This pulls the JSON key you saved in GitHub Secrets
+        EE_JSON_KEY: ${{ secrets.EARTH_ENGINE_TOKEN }}
+      run: |
+        # 1. Fetch from GEE
+        python fetch_data.py
+        # 2. Run the Ensemble Models
+        python run_inference.py
+
+    - name: Commit and Push Results
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/realtime_predictions.csv
+        # Only commit if the file actually changed
+        git commit -m "🤖 Auto-update: Fire Forecast $(date)" || echo "No changes to commit"
+        git push
