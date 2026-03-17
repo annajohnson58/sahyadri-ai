@@ -31,6 +31,8 @@ jobs:
       env:
         # Accesses the Google Earth Engine Secret you saved in Repo Settings
         EE_JSON_KEY: ${{ secrets.EARTH_ENGINE_TOKEN }}
+        ALERT_EMAIL_SENDER: ${{ secrets.ALERT_EMAIL_SENDER }}
+        ALERT_EMAIL_PASSWORD: ${{ secrets.ALERT_EMAIL_PASSWORD }}
       run: |
         # 1. Fetch live GEE weather data
         python fetch_data.py
