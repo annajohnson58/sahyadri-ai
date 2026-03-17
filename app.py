@@ -95,6 +95,7 @@ def create_alert_list(df):
 app.layout = html.Div([
     dcc.Store(id='auth-store', data={'authenticated': False}, storage_type='session'),
     dcc.Store(id='page-state', data='map'),
+    dcc.Interval(id='interval-component', interval=30*60*1000, n_intervals=0),
     html.Div(id='master-render-engine')
 ])
 
@@ -154,7 +155,7 @@ def render_dashboard(current_page):
     return html.Div([sidebar, html.Div(content, style={'marginLeft': '270px', 'padding': '40px'})])
 
 # === 6. CALLBACKS ===
-@app.callback(Output('master-render-engine', 'children'), [Input('auth-store', 'data'), Input('page-state', 'data')])
+@app.callback(Output('master-render-engine', 'children'), [Input('auth-store', 'data'), Input('page-state', 'data') ,Input('interval-component', 'n_intervals')])
 def render_engine(auth, page):
     if not auth or not auth.get('authenticated'):
         return html.Div([
