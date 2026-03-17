@@ -178,11 +178,27 @@ def nav_handler(n1, n2, n3, n_logout):
     if tid == 'logout-btn': return 'map', {'authenticated': False}
     return tid.split('-')[1], no_update
 
-@app.callback([Output('auth-store', 'data'), Output('login-error-output', 'children')],
-    Input('login-btn', 'n_clicks'), State('pwd-input', 'value'), prevent_initial_call=True)
+@app.callback(
+    [Output('auth-store', 'data'), Output('login-error-output', 'children')],
+    [Input('login-btn', 'n_clicks'), Input('pwd-input', 'n_submit')],
+    State('pwd-input', 'value'),
+    prevent_initial_call=True
+)
 def auth_process(n, pwd):
-    if n > 0 and pwd == "kerala_forest_2026": return {'authenticated': True}, ""
-    return no_update, "❌ ACCESS DENIED"
+    # If the button hasn't been clicked yet, don't show anything
+    if n == 0 or n is None:
+        return no_update, ""
+    
+    # If password is correct
+    if pwd == "kerala_forest_2026":
+        return {'authenticated': True}, ""
+    
+    # If password field is empty but button was clicked
+    if not pwd:
+        return no_update, "PLEASE ENTER PASSWORD"
+    
+    # If password was entered but is incorrect
+    return no_update, "❌ ACCESS DENIED: INVALID PASSWORD"
 
 @app.callback(Output("sync-alert", "is_open"), Input("submit-val", "n_clicks"), [State("zone-sel", "value"), State("obs-radio", "value")], prevent_initial_call=True)
 def sync_process(n, z, o): return True if n and z and o else False
