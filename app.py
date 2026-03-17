@@ -23,14 +23,67 @@ app = dash.Dash(
 server = app.server  # CRITICAL: This allows Render/Gunicorn to host the app
 
 # === 3. DATA ENGINE ===
+# def load_data():
+#     # Robust pathing: looks for 'data' folder in the same directory as app.py
+#     base_dir = os.path.dirname(os.path.abspath(__file__))
+#     data_path = os.path.join(base_dir, 'data', 'realtime_predictions.csv')
+    
+#     if not os.path.exists(data_path):
+#         # Fallback dummy data for initial build testing
+#         print(f"⚠️ Warning: {data_path} not found. Loading fallback.")
+#         return pd.DataFrame({
+#             'lat': [10.85, 10.12], 'lon': [76.27, 76.80], 'fire_prob': [0.95, 0.65], 
+#             'temperature': [42.11, 38.45], 'ndvi': [0.12, 0.22], 'forest_zone': ['Palakkad Gap', 'Idukki Central']
+#         })
+    
+#     try:
+#         df = pd.read_csv(data_path)
+        
+#         # Handle coordinates from GEE .geo column if lat/lon aren't explicit
+#         if '.geo' in df.columns and ('lat' not in df.columns):
+#             def extract_coords(geo_str):
+#                 try:
+#                     geo_data = json.loads(geo_str)
+#                     return geo_data['coordinates'][1], geo_data['coordinates'][0]
+#                 except: return None, None
+#             df['lat'], df['lon'] = zip(*df['.geo'].apply(extract_coords))
+#             df = df.dropna(subset=['lat', 'lon'])
+
+#         df['temperature'] = df['temperature'].round(2)
+#         if 'forest_zone' not in df.columns:
+#             df['forest_zone'] = df['grid_id'].astype(str) if 'grid_id' in df.columns else "Sector " + df.index.astype(str)
+            
+#         return df
+#     except Exception as e:
+#         print(f"❌ Data Error: {e}")
+#         return pd.DataFrame()
+# === 3. DATA ENGINE ===
+# Define the center points for each zone to map the grid IDs
+ZONE_COORDS = {
+    "Wayanad North": [11.85, 76.01], "Wayanad South": [11.55, 76.10],
+    "Palakkad Gap": [10.75, 76.65], "Nilambur North": [11.45, 76.25],
+    "Nilambur South": [11.25, 76.35], "Periyar East": [9.55, 77.20],
+    "Periyar West": [9.50, 77.05], "Idukki Central": [9.85, 76.95],
+    "Munnar High Range": [10.10, 77.05], "Agasthyavanam": [8.65, 77.15],
+    "Silent Valley": [11.10, 76.45], "Aralam": [11.95, 75.85]
+}
+
+def get_nearest_zone(lat, lon):
+    """Calculates which predefined forest zone is closest to the grid point."""
+    min_dist = float('inf')
+    best_zone = "Unknown Sector"
+    for zone, coords in ZONE_COORDS.items():
+        dist = ((lat - coords[0])**2 + (lon - coords[1])**2)**0.5
+        if dist < min_dist:
+            min_dist = dist
+            best_zone = zone
+    return best_zone
+
 def load_data():
-    # Robust pathing: looks for 'data' folder in the same directory as app.py
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_path = os.path.join(base_dir, 'data', 'realtime_predictions.csv')
     
     if not os.path.exists(data_path):
-        # Fallback dummy data for initial build testing
-        print(f"⚠️ Warning: {data_path} not found. Loading fallback.")
         return pd.DataFrame({
             'lat': [10.85, 10.12], 'lon': [76.27, 76.80], 'fire_prob': [0.95, 0.65], 
             'temperature': [42.11, 38.45], 'ndvi': [0.12, 0.22], 'forest_zone': ['Palakkad Gap', 'Idukki Central']
@@ -39,7 +92,7 @@ def load_data():
     try:
         df = pd.read_csv(data_path)
         
-        # Handle coordinates from GEE .geo column if lat/lon aren't explicit
+        # Standard coordinate extraction
         if '.geo' in df.columns and ('lat' not in df.columns):
             def extract_coords(geo_str):
                 try:
@@ -50,14 +103,14 @@ def load_data():
             df = df.dropna(subset=['lat', 'lon'])
 
         df['temperature'] = df['temperature'].round(2)
-        if 'forest_zone' not in df.columns:
-            df['forest_zone'] = df['grid_id'].astype(str) if 'grid_id' in df.columns else "Sector " + df.index.astype(str)
+        
+        # NEW: Map the Grid IDs to actual Forest Zones
+        df['forest_zone'] = df.apply(lambda row: get_nearest_zone(row['lat'], row['lon']), axis=1)
             
         return df
     except Exception as e:
         print(f"❌ Data Error: {e}")
         return pd.DataFrame()
-
 # === 4. UI COMPONENTS ===
 def create_metric(label, value, icon, color="#00f2ff"):
     return html.Div([
@@ -65,31 +118,58 @@ def create_metric(label, value, icon, color="#00f2ff"):
         html.H2(value, style={'marginTop': '10px', 'color': color, 'fontFamily': 'Orbitron'})
     ], className="p-3", style={'border': '1px solid #444', 'borderRadius': '8px', 'background': 'rgba(255,255,255,0.05)'})
 
+# def create_alert_list(df):
+#     if df.empty:
+#         return [dbc.Alert("Scanning Sahyadri Range... No data found.", color="secondary")]
+    
+#     df_sorted = df.sort_values(by='fire_prob', ascending=False)
+#     alert_elements = []
+
+#     for _, row in df_sorted.iterrows():
+#         prob = int(row['fire_prob'] * 100)
+#         if prob >= 80:
+#             alert_elements.append(dbc.Alert([
+#                 html.Strong(f"CRITICAL: {row['forest_zone']}"),
+#                 html.P(f"Extreme Risk: {prob}% | Temp: {row['temperature']}°C", className="mb-0", style={'fontSize': '0.8rem'})
+#             ], color="danger", className="mb-2", style={'borderLeft': '5px solid #ff0000'}))
+#         elif prob >= 50:
+#             alert_elements.append(dbc.Alert([
+#                 html.Strong(f"ADVISORY: {row['forest_zone']}"),
+#                 html.P(f"Moderate Risk: {prob}% | Temp: {row['temperature']}°C", className="mb-0", style={'fontSize': '0.8rem'})
+#             ], color="warning", className="mb-2", style={'borderLeft': '5px solid #ffc107', 'color': '#000'}))
+#         else:
+#             alert_elements.append(dbc.Alert([
+#                 html.Span(f"NORMAL: {row['forest_zone']} ({prob}%)"),
+#             ], color="info", className="mb-1", style={'fontSize': '0.75rem', 'opacity': '0.7'}))
+            
+#     return alert_elements
 def create_alert_list(df):
     if df.empty:
         return [dbc.Alert("Scanning Sahyadri Range... No data found.", color="secondary")]
     
-    df_sorted = df.sort_values(by='fire_prob', ascending=False)
+    # Group by zone to avoid repeating the same zone name 50 times
+    # We take the max fire_prob and average temperature for that zone
+    zone_summary = df.groupby('forest_zone').agg({
+        'fire_prob': 'max',
+        'temperature': 'mean'
+    }).reset_index().sort_values(by='fire_prob', ascending=False)
+
     alert_elements = []
 
-    for _, row in df_sorted.iterrows():
+    for _, row in zone_summary.iterrows():
         prob = int(row['fire_prob'] * 100)
         if prob >= 80:
             alert_elements.append(dbc.Alert([
-                html.Strong(f"CRITICAL: {row['forest_zone']}"),
-                html.P(f"Extreme Risk: {prob}% | Temp: {row['temperature']}°C", className="mb-0", style={'fontSize': '0.8rem'})
-            ], color="danger", className="mb-2", style={'borderLeft': '5px solid #ff0000'}))
+                html.Strong(f"🚨 CRITICAL: {row['forest_zone']}"),
+                html.P(f"Max Risk: {prob}% | Avg Temp: {row['temperature']:.1f}°C", className="mb-0", style={'fontSize': '0.8rem'})
+            ], color="danger", className="mb-2"))
         elif prob >= 50:
             alert_elements.append(dbc.Alert([
-                html.Strong(f"ADVISORY: {row['forest_zone']}"),
-                html.P(f"Moderate Risk: {prob}% | Temp: {row['temperature']}°C", className="mb-0", style={'fontSize': '0.8rem'})
-            ], color="warning", className="mb-2", style={'borderLeft': '5px solid #ffc107', 'color': '#000'}))
-        else:
-            alert_elements.append(dbc.Alert([
-                html.Span(f"NORMAL: {row['forest_zone']} ({prob}%)"),
-            ], color="info", className="mb-1", style={'fontSize': '0.75rem', 'opacity': '0.7'}))
+                html.Strong(f"⚠️ ADVISORY: {row['forest_zone']}"),
+                html.P(f"Max Risk: {prob}% | Avg Temp: {row['temperature']:.1f}°C", className="mb-0", style={'fontSize': '0.8rem'})
+            ], color="warning", className="mb-2", style={'color': '#000'}))
             
-    return alert_elements
+    return alert_elements if alert_elements else [dbc.Alert("All zones report low risk.", color="success")]
 
 # === 5. LAYOUT ===
 app.layout = html.Div([
