@@ -2,7 +2,7 @@ name: Sahyadri AI Realtime Pipeline
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs daily at 00:00 UTC (5:30 AM IST)
+    - cron: '0 */6 * * *' # Runs daily at 00:00 UTC (5:30 AM IST)
   workflow_dispatch:      # Allows you to click "Run workflow" manually for testing
 
 jobs:
