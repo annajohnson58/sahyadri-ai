@@ -184,21 +184,24 @@ def nav_handler(n1, n2, n3, n_logout):
     State('pwd-input', 'value'),
     prevent_initial_call=True
 )
-def auth_process(n, pwd):
-    # If the button hasn't been clicked yet, don't show anything
-    if n == 0 or n is None:
+def auth_process(n_clicks, n_submit, pwd):
+    # Check if either the button was clicked or Enter was pressed
+    # We use (n_clicks or 0) + (n_submit or 0) to ensure we have a valid number
+    total_triggers = (n_clicks or 0) + (n_submit or 0)
+    
+    if total_triggers == 0:
         return no_update, ""
     
-    # If password is correct
+    # 1. Correct Password
     if pwd == "kerala_forest_2026":
         return {'authenticated': True}, ""
     
-    # If password field is empty but button was clicked
+    # 2. Empty Password field
     if not pwd:
-        return no_update, "PLEASE ENTER PASSWORD"
+        return no_update, "⚠️ PLEASE ENTER KEY"
     
-    # If password was entered but is incorrect
-    return no_update, "❌ ACCESS DENIED: INVALID PASSWORD"
+    # 3. Incorrect Password
+    return no_update, "❌ ACCESS DENIED: INVALID KEY"
 
 @app.callback(Output("sync-alert", "is_open"), Input("submit-val", "n_clicks"), [State("zone-sel", "value"), State("obs-radio", "value")], prevent_initial_call=True)
 def sync_process(n, z, o): return True if n and z and o else False
