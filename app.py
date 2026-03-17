@@ -155,8 +155,14 @@ def render_dashboard(current_page):
     return html.Div([sidebar, html.Div(content, style={'marginLeft': '270px', 'padding': '40px'})])
 
 # === 6. CALLBACKS ===
-@app.callback(Output('master-render-engine', 'children'), [Input('auth-store', 'data'), Input('page-state', 'data') ,Input('interval-component', 'n_intervals')])
-def render_engine(auth, page):
+# === 6. CALLBACKS ===
+@app.callback(
+    Output('master-render-engine', 'children'), 
+    [Input('auth-store', 'data'), 
+     Input('page-state', 'data'), 
+     Input('interval-component', 'n_intervals')]
+)
+def render_engine(auth, page, n): # Added 'n' here to match the 3 inputs above
     if not auth or not auth.get('authenticated'):
         return html.Div([
             html.Div([
@@ -167,8 +173,9 @@ def render_engine(auth, page):
                 html.Div(id="login-error-output", className="mt-3", style={'color': '#ff4400'})
             ], style={'maxWidth': '400px', 'margin': '150px auto', 'textAlign': 'center', 'padding': '40px', 'background': '#0a0a0a', 'border': '1px solid #333'})
         ])
+    
+    # If authenticated, this runs every time the interval 'n' updates (every 30 mins)
     return render_dashboard(page)
-
 @app.callback([Output('page-state', 'data'), Output('auth-store', 'data', allow_duplicate=True)],
     [Input('nav-map', 'n_clicks'), Input('nav-field', 'n_clicks'), Input('nav-logs', 'n_clicks'), Input('logout-btn', 'n_clicks')],
     prevent_initial_call=True)
