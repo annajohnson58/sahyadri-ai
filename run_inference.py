@@ -144,7 +144,7 @@ def run_ensemble_inference():
     print(f"💾 Results saved to: {OUTPUT_PATH}")
     print("-" * 30)
 
-    critical_df = df[df['fire_prob'] > 0.8]
+    critical_df = df[df['fire_prob'] > 0.5]
     if not critical_df.empty:
         print(f"🚨 {len(critical_df)} Critical points detected! Triggering email...")
         send_alert_email(critical_df)
