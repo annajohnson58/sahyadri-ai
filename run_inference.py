@@ -7,6 +7,47 @@ import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 from tensorflow.keras.models import load_model
 from datetime import datetime, timedelta
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+def send_alert_email(critical_zones):
+    """Sends an email alert if critical fire risks are detected."""
+    sender_email = os.environ.get("ALERT_EMAIL_SENDER")
+    sender_password = os.environ.get("ALERT_EMAIL_PASSWORD")
+    receiver_email = "your-email@gmail.com" # Change to your email or a list
+
+    if not sender_email or not sender_password:
+        print("⚠️ Email credentials missing. Skipping alert.")
+        return
+
+    msg = MIMEMultipart()
+    msg['From'] = f"Sahyadri AI Sentinel <{sender_email}>"
+    msg['To'] = receiver_email
+    msg['Subject'] = f"🚨 CRITICAL FIRE ALERT: {len(critical_zones)} Sectors at Risk"
+
+    # Create the email body
+    body = f"<h3>Sahyadri AI Early Warning Report</h3>"
+    body += f"<p>Our ensemble models (XGBoost + LSTM) have detected <b>CRITICAL</b> fire risk for the following sectors in Kerala:</p>"
+    body += "<ul>"
+    for _, row in critical_zones.iterrows():
+        body += f"<li><b>Sector {row['grid_id']}</b>: {row['fire_prob']*100:.1f}% Risk (Temp: {row['temperature']:.1f}°C)</li>"
+    body += "</ul>"
+    body += f"<p><i>Forecast Date: {critical_zones.iloc[0]['forecast_date']}</i></p>"
+    body += "<br><p>Please check the Command Dashboard for detailed coordinates.</p>"
+
+    msg.attach(MIMEText(body, 'html'))
+
+    try:
+        # Use Gmail's SMTP settings
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        print(f"📧 Alert email sent successfully to {receiver_email}")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
 
 # === 1. CONFIGURATION ===
 INPUT_PATH = os.path.join("data", "realtime_weather_features.csv")
@@ -102,6 +143,13 @@ def run_ensemble_inference():
     print(f"🔥 Critical Alerts: {len(df[df['fire_prob'] > 0.8])}")
     print(f"💾 Results saved to: {OUTPUT_PATH}")
     print("-" * 30)
+
+    critical_df = df[df['fire_prob'] > 0.8]
+    if not critical_df.empty:
+        print(f"🚨 {len(critical_df)} Critical points detected! Triggering email...")
+        send_alert_email(critical_df)
+    else:
+        print("✅ No critical risks detected. No email sent.")
 
 if __name__ == "__main__":
     run_ensemble_inference()
