@@ -15,7 +15,7 @@ def send_alert_email(critical_zones):
     """Sends an email alert if critical fire risks are detected."""
     sender_email = os.environ.get("ALERT_EMAIL_SENDER")
     sender_password = os.environ.get("ALERT_EMAIL_PASSWORD")
-    receiver_email = "forestfire8@gmail.com" # Change to your email or a list
+    receiver_email = "forestfiredemo8@gmail.com" # Change to your email or a list
 
     if not sender_email or not sender_password:
         print("⚠️ Email credentials missing. Skipping alert.")
