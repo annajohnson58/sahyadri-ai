@@ -257,9 +257,9 @@ def render_engine(auth, page, n): # Added 'n' here to match the 3 inputs above
     # If authenticated, this runs every time the interval 'n' updates (every 30 mins)
     return render_dashboard(page)
 @app.callback([Output('page-state', 'data'), Output('auth-store', 'data', allow_duplicate=True)],
-    [Input('nav-map', 'n_clicks'), Input('nav-field', 'n_clicks'), Input('nav-logs', 'n_clicks'), Input('logout-btn', 'n_clicks')],
+    [Input('nav-map', 'n_clicks'), Input('nav-logs', 'n_clicks'), Input('logout-btn', 'n_clicks')],
     prevent_initial_call=True)
-def nav_handler(n1, n2, n3, n_logout):
+def nav_handler(n1, n3, n_logout):
     ctx = callback_context
     if not ctx.triggered: return 'map', no_update
     tid = ctx.triggered[0]['prop_id'].split('.')[0]
