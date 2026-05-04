@@ -188,24 +188,24 @@ def render_dashboard(current_page):
         html.H4("SAHYADRI AI", style={'color': '#ff4400', 'fontFamily': 'Orbitron', 'marginBottom': '50px'}),
         dbc.Nav([
             dbc.NavLink("INCIDENT MAP", id="nav-map", active=(current_page == 'map'), n_clicks=0, href="#"),
-            dbc.NavLink("FIELD REPORTING", id="nav-field", active=(current_page == 'field'), n_clicks=0, href="#"),
+            # dbc.NavLink("FIELD REPORTING", id="nav-field", active=(current_page == 'field'), n_clicks=0, href="#"),
             dbc.NavLink("SATELLITE LOGS", id="nav-logs", active=(current_page == 'logs'), n_clicks=0, href="#"),
         ], vertical=True, pills=True),
         dbc.Button("LOGOUT", id="logout-btn", color="danger", size="sm", className="mt-auto")
     ], style={'width': '250px', 'position': 'fixed', 'height': '100vh', 'padding': '20px', 'borderRight': '1px solid #444', 'display': 'flex', 'flexDirection': 'column'})
 
-    if current_page == "field":
-        content = html.Div([
-            dbc.Alert("✅ DATABASE SYNCED", id="sync-alert", is_open=False, duration=3000, color="success"),
-            html.H2("FIELD REPORTING", style={'fontFamily': 'Orbitron'}),
-            html.Div([
-                html.P("RANGE OFFICER LOG", style={'color': '#ff4400', 'fontWeight': 'bold'}),
-                dcc.Dropdown(id='zone-sel', options=[{'label': z, 'value': z} for z in PREDEFINED_ZONES], placeholder="SELECT ZONE", style={'color': '#000'}),
-                dbc.RadioItems(id='obs-radio', options=[{"label": "ACTIVE FIRE", "value": 1},{"label": "CLEAR", "value": 0}], className="my-4", style={'color': '#00f2ff'}),
-                dbc.Button("SYNC TO STATE", id="submit-val", color="warning", className="w-100")
-            ], className="p-4 mt-4", style={'background': 'rgba(255,255,255,0.05)', 'borderRadius': '10px', 'maxWidth': '500px'})
-        ])
-    elif current_page == "logs":
+    # if current_page == "field":
+    #     content = html.Div([
+    #         dbc.Alert("✅ DATABASE SYNCED", id="sync-alert", is_open=False, duration=3000, color="success"),
+    #         html.H2("FIELD REPORTING", style={'fontFamily': 'Orbitron'}),
+    #         html.Div([
+    #             html.P("RANGE OFFICER LOG", style={'color': '#ff4400', 'fontWeight': 'bold'}),
+    #             dcc.Dropdown(id='zone-sel', options=[{'label': z, 'value': z} for z in PREDEFINED_ZONES], placeholder="SELECT ZONE", style={'color': '#000'}),
+    #             dbc.RadioItems(id='obs-radio', options=[{"label": "ACTIVE FIRE", "value": 1},{"label": "CLEAR", "value": 0}], className="my-4", style={'color': '#00f2ff'}),
+    #             dbc.Button("SYNC TO STATE", id="submit-val", color="warning", className="w-100")
+    #         ], className="p-4 mt-4", style={'background': 'rgba(255,255,255,0.05)', 'borderRadius': '10px', 'maxWidth': '500px'})
+    #     ])
+    if current_page == "logs":
         log_rows = [html.P(f"> [SCAN] {r['forest_zone']}: {r['temperature']}°C | NDVI: {r['ndvi']}") for _, r in df.iterrows()]
         content = html.Div([
             html.H2("TELEMETRY LOGS", style={'fontFamily': 'Orbitron'}),
