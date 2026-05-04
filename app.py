@@ -201,7 +201,7 @@ def render_dashboard(current_page):
             html.Div([
                 html.P("RANGE OFFICER LOG", style={'color': '#ff4400', 'fontWeight': 'bold'}),
                 dcc.Dropdown(id='zone-sel', options=[{'label': z, 'value': z} for z in PREDEFINED_ZONES], placeholder="SELECT ZONE", style={'color': '#000'}),
-                dbc.RadioItems(id='obs-radio', options=[{"label": "ACTIVE FIRE", "value": 1}, {"label": "SMOKE", "value": 2}, {"label": "CLEAR", "value": 3}], className="my-4", style={'color': '#00f2ff'}),
+                dbc.RadioItems(id='obs-radio', options=[{"label": "ACTIVE FIRE", "value": 1},{"label": "CLEAR", "value": 0}], className="my-4", style={'color': '#00f2ff'}),
                 dbc.Button("SYNC TO STATE", id="submit-val", color="warning", className="w-100")
             ], className="p-4 mt-4", style={'background': 'rgba(255,255,255,0.05)', 'borderRadius': '10px', 'maxWidth': '500px'})
         ])
