@@ -281,7 +281,8 @@ def auth_process(n_clicks, n_submit, pwd):
         return no_update, ""
     
     # 1. Correct Password
-    if pwd == "kerala_forest_2026":
+    #if pwd == "kerala_forest_2026":
+    if pwd == os.environ.get("AUTH_PASSWORD", "kerala_forest_2026"):
         return {'authenticated': True}, ""
     
     # 2. Empty Password field
